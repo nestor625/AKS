@@ -1,0 +1,67 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: odoo-shop
+  labels:
+    app: odoo-shop
+spec:
+  selector:
+    matchLabels:
+      app: odoo-shop
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: odoo-shop
+        tier: frontend
+    spec:
+      containers:
+      - image: codeflavor/odoo-docker:latest
+        name: odoo-shop
+        env:
+        - name: HOST
+          value: odoo-db
+        - name: USER
+          value: odoo
+        - name: PASSWORD
+          value: password
+        ports:
+        - containerPort: 8069
+          name: odoo-shop
+        volumeMounts:
+        - name: odoo-shop-persistent-storage
+          mountPath: /mnt/extra-addons
+      volumes:
+      - name: odoo-shop-persistent-storage
+        persistentVolumeClaim:
+          claimName: odoo-shop-pv-claim
+            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo-shop
+  labels:
+    app: odoo-shop
+spec:
+  ports:
+    - port: 8069
+  selector:
+    app: odoo-shop
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odoo-shop-pv-claim
+  labels:
+    app: odoo-shop
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

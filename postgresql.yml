@@ -1,0 +1,66 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: odoo-db
+  labels:
+    app: odoo-shop
+spec:
+  selector:
+    matchLabels:
+      app: odoo-shop
+      tier: backend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: odoo-shop
+        tier: backend
+    spec:
+      containers:
+      - image: postgres:9.4
+        name: odoo-db
+        env:
+        - name: POSTGRES_USER
+          value: odoo
+        - name: POSTGRES_PASSWORD
+          value: password
+        - name: PGDATA
+          value: /var/lib/POSTGRES/data/pgdata  
+        ports:
+        - containerPort: 5432
+          name: backend
+        volumeMounts:
+        - name: backend-persistent-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:         
+      - name: backend-persistent-storage
+        persistentVolumeClaim:
+          claimName: backend-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo-db
+  labels:
+    app: odoo-shop
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: odoo-shop
+    tier: backend 
+  type: LoadBalancer     
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: backend-pv-claim
+  labels:
+    app: odoo-shop
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
